@@ -121,14 +121,19 @@ const LogbookTab: React.FC = () => {
             const val = parseFloat(readings[f.key] || '0');
             finalReadings[f.key] = val;
             
-            // Check Critical Limits (Si existe un límite crítico y se pasa)
+            // LÓGICA DE ALERTA ROJA (CRITICAL)
+            // Se usa el operador '!' para asegurar que accedemos a las props si existen.
+            // Aunque TypeScript no sepa si existen en todos, constants.ts ya los tiene.
             const isCritical = (f.critMin !== undefined && val < f.critMin) || 
                                (f.critMax !== undefined && val > f.critMax);
             
-            // Check Warning Limits
+            // Lógica de Alerta Amarilla (WARNING)
             const isWarning = (f.min !== undefined && val < f.min) || 
                               (f.max !== undefined && val > f.max);
 
+            // La lógica acumula el peor estado:
+            // Si ya es CRITICAL, se queda CRITICAL.
+            // Si es WARNING y no era CRITICAL, se vuelve WARNING.
             if (isCritical) {
                 status = 'CRITICAL';
             } else if (isWarning && status !== 'CRITICAL') {
@@ -151,19 +156,24 @@ const LogbookTab: React.FC = () => {
         setNotes('');
     };
 
-    const recentLogs = logbook.filter(l => l.type === selectedType).slice(0, 10); // Show more logs
+    const recentLogs = logbook.filter(l => l.type === selectedType).slice(0, 10); 
 
+    // HELPERS PARA FECHA (MANUAL PARA EVITAR ERROR DE BROWSER)
     const formatDate = (isoString: string) => {
-        const date = new Date(isoString);
-        // FORCE FULL DATE DISPLAY FOR AUDITS (DD/MM/YYYY hh:mm am/pm)
-        return date.toLocaleString('es-MX', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        const d = new Date(isoString);
+        // Construcción manual "DD/MM/AAAA HH:MM am/pm"
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear();
+        
+        // Time with AM/PM
+        let hours = d.getHours();
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        
+        return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
     };
 
     const getStatusStyle = (s: string) => {
@@ -214,8 +224,8 @@ const LogbookTab: React.FC = () => {
                                             <span>OK: {f.min}-{f.max}</span>
                                         </div>
                                         {(f.critMin !== undefined || f.critMax !== undefined) && (
-                                            <div className="flex justify-between text-rose-400 font-semibold">
-                                                <span>Crit: {f.critMin ? `<${f.critMin}` : ''} {f.critMax ? `>${f.critMax}` : ''}</span>
+                                            <div className="flex justify-between text-rose-500 font-bold">
+                                                <span>Peligro: {f.critMin !== undefined ? `<${f.critMin}` : ''} {f.critMax !== undefined ? `>${f.critMax}` : ''}</span>
                                             </div>
                                         )}
                                     </div>
@@ -244,11 +254,12 @@ const LogbookTab: React.FC = () => {
                     <div key={log.id} className={`p-3 rounded-lg border ${log.status === 'WARNING' ? 'bg-amber-50 border-amber-200' : log.status === 'CRITICAL' ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200'}`}>
                         <div className="flex justify-between items-start mb-2">
                              <div className="flex flex-col">
+                                 {/* FECHA COMPLETA FORZADA */}
                                  <span className="text-xs font-bold text-slate-700">{formatDate(log.date)}</span>
                                  <span className="text-[10px] text-slate-400">{log.user}</span>
                              </div>
                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${getStatusStyle(log.status)}`}>
-                                 {log.status === 'CRITICAL' && <AlertOctagon size={10} />}
+                                 {log.status === 'CRITICAL' && <AlertOctagon size={12} />}
                                  {log.status}
                              </span>
                         </div>
