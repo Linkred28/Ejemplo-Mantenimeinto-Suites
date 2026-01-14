@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../AppContext';
-import { Role, Ticket, TicketStatus, Urgency, MaintenanceType, LogbookEntry } from '../types';
+import { Role, Ticket, TicketStatus, Urgency, MaintenanceType, LogbookEntry, Impact } from '../types';
 import { LOGBOOK_FIELDS } from '../constants';
 import { Button } from '../components/Button';
 import { getStatusColor, getUrgencyColor } from '../utils';
@@ -8,7 +8,8 @@ import {
   Check, PenTool, Box, UserPlus, AlertOctagon,
   ClipboardList, Package, Search, X, ArrowDownCircle,
   AlertTriangle, Zap, Droplet, Fan, Hammer, Monitor,
-  Key, Briefcase, Camera, Clock, Repeat, BookOpen
+  Key, Briefcase, Camera, Clock, Repeat, BookOpen,
+  BarChart2, Flame
 } from 'lucide-react';
 
 // ============================
@@ -20,16 +21,18 @@ type InventoryItem = { id: string; sku: string; name: string; location: string; 
 const TicketCard: React.FC<{ ticket: Ticket; onEdit: (t: Ticket) => void }> = ({ ticket, onEdit }) => {
   return (
     <div
-      className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden flex flex-col h-full"
+      className={`bg-white rounded-lg border p-4 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden flex flex-col h-full group
+        ${ticket.urgency === Urgency.HIGH ? 'border-rose-300 ring-1 ring-rose-100 shadow-rose-100' : 'border-slate-200'}
+      `}
       onClick={() => onEdit(ticket)}
     >
       {ticket.origin === 'GUEST' && (
-        <div className="absolute top-0 right-0 bg-rose-500 text-white text-[9px] px-2 py-0.5 rounded-bl-lg font-bold">
+        <div className="absolute top-0 right-0 bg-rose-500 text-white text-[9px] px-2 py-0.5 rounded-bl-lg font-bold z-10">
           HUÉSPED
         </div>
       )}
       {ticket.cannibalizedFromRoom && (
-         <div className="absolute top-0 left-0 bg-purple-100 text-purple-700 text-[9px] px-2 py-0.5 rounded-br-lg font-bold border-b border-r border-purple-200">
+         <div className="absolute top-0 left-0 bg-purple-100 text-purple-700 text-[9px] px-2 py-0.5 rounded-br-lg font-bold border-b border-r border-purple-200 z-10">
            PIEZA TOMADA
          </div>
       )}
@@ -39,6 +42,7 @@ const TicketCard: React.FC<{ ticket: Ticket; onEdit: (t: Ticket) => void }> = ({
           <span className="text-xs font-mono text-slate-400 block mb-1">{ticket.id}</span>
           <h4 className="font-bold text-lg text-slate-900 flex items-center gap-2">
             Hab {ticket.roomNumber}
+            {ticket.urgency === Urgency.HIGH && <AlertTriangle size={16} className="text-rose-500 fill-rose-100" />}
           </h4>
         </div>
         <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(ticket.status)}`}>
@@ -46,21 +50,49 @@ const TicketCard: React.FC<{ ticket: Ticket; onEdit: (t: Ticket) => void }> = ({
         </div>
       </div>
 
-      <div className="mb-2">
-        <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-md font-medium">
-           {/* Icon logic would go here */}
-           {ticket.maintenanceType || 'General'}
-        </span>
+      <div className="mb-3">
+        {/* IMPROVED CLASSIFICATION DISPLAY */}
+        <div className="flex flex-col gap-1">
+             <span className="text-xs font-bold text-slate-800">{ticket.asset}</span>
+             <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                {ticket.issueType}
+             </span>
+        </div>
       </div>
 
-      <p className="text-sm text-slate-600 mb-4 line-clamp-2 flex-grow">{ticket.description}</p>
+      <p className="text-sm text-slate-600 mb-4 line-clamp-2 flex-grow border-t border-slate-50 pt-2 mt-1">
+          {ticket.description}
+      </p>
 
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
-        <div className="flex items-center gap-2 text-xs">
-          <span className={`${getUrgencyColor(ticket.urgency)}`}>{ticket.urgency}</span>
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">{new Date(ticket.createdAt).toLocaleDateString()}</span>
-        </div>
+      {/* METRICS & DATA VISUALIZATION (Backend Data) */}
+      <div className="bg-slate-50 rounded p-2 mb-3 grid grid-cols-2 gap-2 border border-slate-100">
+          <div>
+              <span className="text-[9px] text-slate-400 uppercase font-bold block">Urgencia</span>
+              <span className={`text-xs font-bold ${getUrgencyColor(ticket.urgency)}`}>{ticket.urgency}</span>
+          </div>
+          <div>
+              <span className="text-[9px] text-slate-400 uppercase font-bold block">Impacto</span>
+              <span className={`text-xs font-bold ${ticket.impact === Impact.BLOCKING ? 'text-rose-700' : 'text-slate-700'}`}>
+                  {ticket.impact}
+              </span>
+          </div>
+          <div className="col-span-2 border-t border-slate-200 pt-1 mt-1 flex justify-between items-center">
+               <span className="text-[9px] text-slate-400 uppercase font-bold flex items-center gap-1">
+                   <BarChart2 size={10}/> Priority Score
+               </span>
+               <div className="flex items-center gap-1">
+                   {ticket.priorityScore > 80 && <Flame size={12} className="text-orange-500 fill-orange-500" />}
+                   <span className="text-xs font-mono font-black text-slate-800">{ticket.priorityScore} pts</span>
+               </div>
+          </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-auto">
+        <span className="text-xs text-slate-400">{new Date(ticket.createdAt).toLocaleDateString()}</span>
+        <span className="text-slate-300 group-hover:text-slate-500 transition-colors flex items-center gap-1 text-xs font-medium">
+            <PenTool size={12}/> Editar
+        </span>
       </div>
     </div>
   );
@@ -139,7 +171,7 @@ const LogbookTab: React.FC = () => {
                                             type="number" 
                                             step="0.1"
                                             required
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold text-slate-900 focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                                            className="w-full bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2 text-lg font-bold focus:ring-2 focus:ring-slate-900 focus:border-transparent"
                                             value={readings[f.key] || ''}
                                             onChange={e => handleChange(f.key, e.target.value)}
                                         />
@@ -155,7 +187,7 @@ const LogbookTab: React.FC = () => {
                         <div className="mb-4">
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
                             <textarea 
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                                className="w-full bg-white text-slate-900 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900"
                                 rows={2}
                                 value={notes}
                                 onChange={e => setNotes(e.target.value)}
@@ -236,9 +268,13 @@ const TicketEditModal: React.FC<{
           <div>
             <span className="text-xs font-mono text-slate-400">{ticket.id}</span>
             <h2 className="text-2xl font-bold text-slate-900">Habitación {ticket.roomNumber}</h2>
-            <div className="flex gap-2 mt-1">
-                {ticket.origin === 'GUEST' && <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded">QUEJA HUÉSPED</span>}
-                <span className="text-sm text-slate-500">{ticket.asset}</span>
+            <div className="flex flex-col gap-1 mt-1">
+                <div className="flex gap-2">
+                    {ticket.origin === 'GUEST' && <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded">QUEJA HUÉSPED</span>}
+                </div>
+                <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    {ticket.asset} <span className="text-slate-400">/</span> {ticket.issueType}
+                </div>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
@@ -312,11 +348,21 @@ const TicketEditModal: React.FC<{
                      <div className="space-y-3">
                          <div>
                              <label className="text-xs font-bold text-purple-700">Habitación Donante (Vacía)</label>
-                             <input value={cannibalRoom} onChange={e => setCannibalRoom(e.target.value)} className="w-full border border-purple-300 rounded p-2 text-sm" placeholder="Ej. 204" />
+                             <input 
+                                value={cannibalRoom} 
+                                onChange={e => setCannibalRoom(e.target.value)} 
+                                className="w-full bg-white text-slate-900 border border-purple-300 rounded p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
+                                placeholder="Ej. 204" 
+                             />
                          </div>
                          <div>
                              <label className="text-xs font-bold text-purple-700">Pieza Retirada</label>
-                             <input value={cannibalPart} onChange={e => setCannibalPart(e.target.value)} className="w-full border border-purple-300 rounded p-2 text-sm" placeholder="Ej. Control Remoto" />
+                             <input 
+                                value={cannibalPart} 
+                                onChange={e => setCannibalPart(e.target.value)} 
+                                className="w-full bg-white text-slate-900 border border-purple-300 rounded p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
+                                placeholder="Ej. Control Remoto" 
+                             />
                          </div>
                          <div className="flex gap-2">
                              <Button onClick={handleCannibalize} className="w-full bg-purple-700 hover:bg-purple-800 text-white">Confirmar Movimiento</Button>
@@ -343,8 +389,32 @@ export const MaintenanceView: React.FC = () => {
     const [tab, setTab] = useState<'TICKETS' | 'LOGBOOK'>('TICKETS');
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
+    // Calculate critical tickets for Banner
+    const criticalTickets = useMemo(() => {
+        return tickets.filter(t => t.urgency === Urgency.HIGH && t.status !== TicketStatus.RESOLVED && t.status !== TicketStatus.VERIFIED);
+    }, [tickets]);
+
+    // SORT TICKETS: High Score First
+    const sortedTickets = useMemo(() => {
+        return [...tickets].sort((a, b) => b.priorityScore - a.priorityScore);
+    }, [tickets]);
+
     return (
         <div>
+            {/* ALERT BANNER */}
+            {criticalTickets.length > 0 && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 mb-6 flex items-start gap-3 animate-pulse">
+                    <AlertOctagon className="text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                        <h3 className="text-rose-800 font-bold text-sm">¡Atención Requerida!</h3>
+                        <p className="text-rose-700 text-sm">
+                            Hay <strong>{criticalTickets.length} ticket(s) de URGENCIA ALTA</strong> que requieren atención inmediata. 
+                            Revisa las tarjetas con borde rojo y score de prioridad elevado.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center gap-4 mb-6">
                 <h2 className="text-2xl font-bold text-slate-900">Operaciones</h2>
                 <div className="flex bg-white p-1 rounded-lg border border-slate-200">
@@ -365,10 +435,10 @@ export const MaintenanceView: React.FC = () => {
 
             {tab === 'TICKETS' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                     {tickets.filter(t => t.status !== TicketStatus.VERIFIED).map(t => (
+                     {sortedTickets.filter(t => t.status !== TicketStatus.VERIFIED).map(t => (
                          <TicketCard key={t.id} ticket={t} onEdit={setSelectedTicket} />
                      ))}
-                     {tickets.filter(t => t.status !== TicketStatus.VERIFIED).length === 0 && (
+                     {sortedTickets.filter(t => t.status !== TicketStatus.VERIFIED).length === 0 && (
                          <div className="col-span-full py-12 text-center text-slate-400">No hay tickets pendientes. ¡Buen trabajo!</div>
                      )}
                 </div>

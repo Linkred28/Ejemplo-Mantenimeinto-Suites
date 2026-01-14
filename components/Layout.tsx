@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../AppContext';
-import { Role } from '../types';
+import { Role, TicketStatus, Urgency } from '../types';
 import { 
   LayoutDashboard, 
   Wrench, 
@@ -15,12 +15,38 @@ import {
   User,
   ChevronDown,
   ClipboardCheck,
-  Package
+  Package,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode; onGoHome: () => void }> = ({ children, onGoHome }) => {
-  const { role, setRole, resetDemoData, currentView, setView } = useApp();
+  const { role, setRole, resetDemoData, currentView, setView, tickets } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Close notifications when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [notifRef]);
+
+  // Calculate Critical Tickets for Notification Badge
+  const criticalTickets = useMemo(() => {
+    return tickets.filter(t => 
+      t.urgency === Urgency.HIGH && 
+      t.status !== TicketStatus.RESOLVED && 
+      t.status !== TicketStatus.VERIFIED
+    );
+  }, [tickets]);
+
+  const criticalCount = criticalTickets.length;
 
   // Mapeo de Roles a items del menú visual
   const menuItems = [
@@ -148,10 +174,63 @@ export const Layout: React.FC<{ children: React.ReactNode; onGoHome: () => void 
           </div>
 
           <div className="flex items-center gap-4 md:gap-6">
-            <button className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-            </button>
+            {/* NOTIFICATION BELL */}
+            <div className="relative" ref={notifRef}>
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className={`relative p-2 transition-colors ${criticalCount > 0 ? 'text-rose-600 hover:bg-rose-50 rounded-full' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  <Bell size={20} className={criticalCount > 0 ? 'animate-swing' : ''} />
+                  {criticalCount > 0 && (
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center bg-rose-600 text-white text-[9px] font-bold rounded-full px-1 border border-white">
+                      {criticalCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Dropdown Notification Panel */}
+                {showNotifications && (
+                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                        <div className="bg-rose-50 px-4 py-3 border-b border-rose-100 flex justify-between items-center">
+                            <h3 className="font-bold text-rose-800 text-sm flex items-center gap-2">
+                                <AlertTriangle size={16}/> Tickets Críticos
+                            </h3>
+                            <span className="text-xs font-bold bg-white text-rose-600 px-2 py-0.5 rounded-full border border-rose-200">{criticalCount}</span>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                            {criticalCount === 0 ? (
+                                <div className="p-8 text-center text-slate-400 text-sm">
+                                    <Bell size={24} className="mx-auto mb-2 opacity-50"/>
+                                    No hay tickets de urgencia Alta.
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {criticalTickets.map(t => (
+                                        <div key={t.id} className="p-4 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => {
+                                            setRole(Role.MAINTENANCE); // Shortcut for demo
+                                            setView('DASHBOARD');
+                                            setShowNotifications(false);
+                                        }}>
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="font-bold text-slate-800 text-sm">Habitación {t.roomNumber}</span>
+                                                <span className="text-[10px] font-mono text-slate-400">{t.id}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-600 line-clamp-2 mb-2">{t.description}</p>
+                                            <div className="flex gap-2">
+                                                <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded uppercase">Urgencia: Alta</span>
+                                                {t.isOccupied && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">Huésped</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="bg-slate-50 p-2 text-center border-t border-slate-100">
+                             <button onClick={() => setShowNotifications(false)} className="text-xs text-slate-500 hover:text-slate-800 font-medium">Cerrar notificaciones</button>
+                        </div>
+                    </div>
+                )}
+            </div>
             
             <div className="h-8 w-[1px] bg-slate-200 hidden md:block"></div>
 

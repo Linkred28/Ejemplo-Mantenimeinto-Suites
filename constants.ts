@@ -10,7 +10,8 @@ import {
   InventoryPart,
   PurchaseOrder,
   MaintenanceType,
-  TicketOrigin
+  TicketOrigin,
+  POStatus
 } from './types';
 import { getMaintenanceType } from './utils';
 
@@ -41,17 +42,23 @@ export const ASSETS = [
   'TV/WiFi',
   'Mobiliario',
   'Cerrajería',
+  'Accesorios de Baño',
+  'Blancos / Amenidades',
+  'Electrodomésticos',
   'Otros',
 ];
 
 export const ISSUE_TYPES = [
-  'No enciende',
-  'Gotea',
-  'Ruido extraño',
-  'Roto/Dañado',
-  'Sucio/Manchado',
-  'Sin señal',
-  'Mal olor',
+  'No funciona / No enciende',
+  'Roto / Dañado Físicamente',
+  'Faltante / Extraviado', // Nuevo: Crucial para controles, toallas, etc.
+  'Batería Baja / Agotada', // Nuevo: Para chapas y controles
+  'Sucio / Manchado',
+  'Gotea / Fuga de Agua',
+  'Ruido Anormal',
+  'Mal Olor',
+  'Sin Señal / Desprogramado', // Nuevo: Para TV/WiFi
+  'Obstruido / Tapado',
 ];
 
 // =========================
@@ -61,9 +68,10 @@ export const ISSUE_TYPES = [
 export const CHECKLIST_ROOM_EXIT = [
   { id: 'lights', label: 'Iluminación (Todas encienden)' },
   { id: 'tv', label: 'TV y Control Remoto (Señal OK)' },
-  { id: 'ac', label: 'A/C (Enfría y sin ruido)' },
+  { id: 'ac', label: 'A/C y Control (Enfría/Config)' },
   { id: 'water', label: 'Grifos y WC (Sin fugas)' },
   { id: 'lock', label: 'Chapa/Cerradura (Funciona)' },
+  { id: 'safe', label: 'Caja Fuerte (Abierta/Pilas)' },
 ];
 
 export const LOGBOOK_FIELDS = {
@@ -215,7 +223,21 @@ export const INITIAL_PARTS: InventoryPart[] = [
   }
 ];
 
-export const INITIAL_POS: PurchaseOrder[] = [];
+// SAMPLE PO TO SHOW IN "EN CAMINO"
+export const INITIAL_POS: PurchaseOrder[] = [
+  {
+    id: 'OC-9001',
+    status: POStatus.ORDERED,
+    createdAt: daysAgo(1),
+    createdBy: Role.MANAGEMENT,
+    vendor: 'Ilumina2',
+    etaDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+    items: [
+      { partId: 'P-006', partName: 'Foco LED Cálido 9W', qty: 50, unit: 'pza' }
+    ],
+    notes: 'Resurtido urgente iluminación'
+  }
+];
 
 // =========================
 // DEMO: Tickets (Vinculados a necesidades)
@@ -224,12 +246,12 @@ export const INITIAL_POS: PurchaseOrder[] = [];
 const BASE_TICKETS: Ticket[] = [
   {
     id: 'T-8001',
-    roomNumber: '105',
+    roomNumber: '106',
     isOccupied: true,
     asset: 'Aire Acondicionado',
     maintenanceType: 'Técnico HVAC',
-    issueType: 'No enciende',
-    description: 'Control remoto perdido por el huésped. Se requiere reposición urgente.',
+    issueType: 'Faltante / Extraviado', // CORRECCIÓN: Claridad absoluta
+    description: 'Control remoto no aparece en la habitación. Huésped requiere uno urgente.',
     urgency: Urgency.HIGH,
     impact: Impact.BLOCKING,
     status: TicketStatus.WAITING_PART,
@@ -250,7 +272,7 @@ const BASE_TICKETS: Ticket[] = [
     isOccupied: false,
     asset: 'Eléctrico',
     maintenanceType: 'Electricista',
-    issueType: 'No enciende',
+    issueType: 'No funciona / No enciende',
     description: 'Fundidos focos principales de la suite.',
     urgency: Urgency.MEDIUM,
     impact: Impact.ANNOYING,
@@ -272,8 +294,8 @@ const BASE_TICKETS: Ticket[] = [
     isOccupied: true,
     asset: 'Plomería',
     maintenanceType: 'Plomero',
-    issueType: 'Gotea',
-    description: 'Fuga leve en regadera.',
+    issueType: 'Gotea / Fuga de Agua',
+    description: 'Fuga leve en regadera detectada durante limpieza.',
     urgency: Urgency.LOW,
     impact: Impact.ANNOYING,
     status: TicketStatus.OPEN,
@@ -286,15 +308,16 @@ const BASE_TICKETS: Ticket[] = [
   }
 ];
 
-// Generar tickets urgentes (Relleno)
+// Generar tickets REALISTAS (Simulación de Operación)
 const URGENT_ASSETS = [
-  { asset: 'Aire Acondicionado', issue: 'No enfría nada', maint: 'Técnico HVAC' },
-  { asset: 'Plomería', issue: 'Fuga mayor inundando baño', maint: 'Plomero' },
-  { asset: 'Eléctrico', issue: 'Sin energía en habitación', maint: 'Electricista' },
-  { asset: 'Cerrajería', issue: 'Huésped encerrado / puerta no abre', maint: 'Cerrajero' },
+  { asset: 'Aire Acondicionado', issue: 'No funciona / No enciende', maint: 'Técnico HVAC', desc: "Sensor BMS: Temperatura no desciende de 26°C tras 1 hora de operación." },
+  { asset: 'Plomería', issue: 'Obstruido / Tapado', maint: 'Plomero', desc: "Ama de Llaves reporta: Lavabo drena muy lento, posible obstrucción parcial." },
+  { asset: 'Eléctrico', issue: 'No funciona / No enciende', maint: 'Electricista', desc: "Huésped reporta: Enchufe de mesa de noche no tiene corriente para cargar celular." },
+  { asset: 'Cerrajería', issue: 'Batería Baja / Agotada', maint: 'Cerrajero', desc: "Alerta automática (Salto): Batería de chapa principal al 15%." },
+  { asset: 'TV/WiFi', issue: 'Sin Señal / Desprogramado', maint: 'Técnico TV/Redes', desc: "Huésped reporta: TV muestra pantalla azul 'No Signal' en canales deportivos." },
 ];
 
-const EXTRA_URGENT_TICKETS: Ticket[] = Array.from({ length: 30 }, (_, i) => {
+const EXTRA_URGENT_TICKETS: Ticket[] = Array.from({ length: 15 }, (_, i) => {
   const tData = URGENT_ASSETS[i % URGENT_ASSETS.length];
   const room = (201 + i).toString();
   
@@ -305,15 +328,15 @@ const EXTRA_URGENT_TICKETS: Ticket[] = Array.from({ length: 30 }, (_, i) => {
     asset: tData.asset,
     maintenanceType: tData.maint as MaintenanceType,
     issueType: tData.issue,
-    description: `[URGENTE] Reporte masivo generado automáticamente. Problema crítico en ${tData.asset}.`,
-    urgency: Urgency.HIGH,
-    impact: Impact.BLOCKING,
+    description: tData.desc, // DESCRIPCIÓN REALISTA
+    urgency: i % 3 === 0 ? Urgency.HIGH : Urgency.MEDIUM,
+    impact: i % 2 === 0 ? Impact.BLOCKING : Impact.ANNOYING,
     status: TicketStatus.OPEN,
-    origin: 'GUEST', // Asumimos que si es urgente, el huésped lo notó
+    origin: i % 3 === 0 ? 'SYSTEM' : 'GUEST',
     createdAt: daysAgo(0),
-    createdBy: Role.MANAGEMENT,
-    notes: ['Generado por simulación de carga alta.'],
-    history: [{ date: daysAgo(0), action: 'Ticket de emergencia creado', user: Role.MANAGEMENT }],
+    createdBy: i % 3 === 0 ? Role.MANAGEMENT : Role.RECEPTION,
+    notes: ['Simulación: Ticket generado por evento operativo.'],
+    history: [{ date: daysAgo(0), action: 'Ticket registrado en sistema', user: 'System' }],
     priorityScore: 0,
   };
 });

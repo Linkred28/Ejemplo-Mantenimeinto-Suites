@@ -124,7 +124,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // UPDATED: Supervisor now has inventory view access
     const canViewInventory = role === Role.MANAGEMENT || role === Role.MAINTENANCE || role === Role.SUPERVISOR;
     const canReserve = role === Role.MANAGEMENT || role === Role.MAINTENANCE;
-    const canCreatePO = role === Role.MANAGEMENT;
+    // UPDATED: Supervisor can create/request POs
+    const canCreatePO = role === Role.MANAGEMENT || role === Role.SUPERVISOR;
     const canAdjustStock = role === Role.MANAGEMENT;
     return { canViewInventory, canReserve, canCreatePO, canAdjustStock };
   }, [role]);

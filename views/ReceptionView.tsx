@@ -183,7 +183,10 @@ export const ReceptionView: React.FC = () => {
             )}
 
             {occupiedActive.map(t => (
-              <div key={t.id} className="px-6 py-5">
+              <div 
+                key={t.id} 
+                className={`px-6 py-5 transition-colors ${t.urgency === Urgency.HIGH ? 'bg-rose-50/50' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -199,6 +202,7 @@ export const ReceptionView: React.FC = () => {
 
                     <div className="text-lg font-bold text-slate-900">
                       Hab {t.roomNumber} <span className="text-sm font-normal text-slate-500">· {t.asset}</span>
+                      {t.urgency === Urgency.HIGH && <span className="ml-2 text-xs bg-rose-600 text-white px-2 py-0.5 rounded-full">CRÍTICO</span>}
                     </div>
 
                     <p className="text-sm text-slate-600 mt-1">{t.description}</p>

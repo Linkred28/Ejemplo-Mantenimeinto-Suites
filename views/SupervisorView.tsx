@@ -12,7 +12,8 @@ import {
   CheckSquare,
   ClipboardList,
   Package,
-  Wrench
+  Wrench,
+  AlertOctagon
 } from 'lucide-react';
 
 interface SupervisorViewProps {
@@ -29,14 +30,15 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
   
   // Checklist Logic
   // completedItems: IDs of items marked as OK
-  // failedItems: Record<ID, { comment, partId }> 
+  // failedItems: Record<ID, { comment, partId, issueType }> 
   const [completedItems, setCompletedItems] = useState<string[]>([]);
-  const [failedItems, setFailedItems] = useState<Record<string, { comment: string, partId?: string }>>({});
+  const [failedItems, setFailedItems] = useState<Record<string, { comment: string, partId?: string, issueType: string }>>({});
   
   // Show input box for specific item failure
   const [activeFailInput, setActiveFailInput] = useState<string | null>(null);
   const [tempFailComment, setTempFailComment] = useState('');
-  const [tempFailPart, setTempFailPart] = useState(''); // Stores partId if needed
+  const [tempFailPart, setTempFailPart] = useState(''); 
+  const [tempFailIssue, setTempFailIssue] = useState(''); // New: Realistic Issue Type
 
   const isInspectedToday = (roomNumber: string) => {
     const last = inspections[roomNumber];
@@ -67,6 +69,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
     const existing = failedItems[id];
     setTempFailComment(existing?.comment || '');
     setTempFailPart(existing?.partId || '');
+    setTempFailIssue(existing?.issueType || ISSUE_TYPES[0]); // Default to first issue type
   };
 
   const confirmFail = (id: string) => {
@@ -75,7 +78,8 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
         ...prev, 
         [id]: { 
             comment: tempFailComment, 
-            partId: tempFailPart || undefined 
+            partId: tempFailPart || undefined,
+            issueType: tempFailIssue || 'Reporte Supervisor'
         } 
     }));
     setCompletedItems(prev => prev.filter(i => i !== id)); // Remove from OK
@@ -99,12 +103,13 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
       if (id === 'lights') assetCat = 'Eléctrico';
       if (id === 'tv') assetCat = 'TV/WiFi';
       if (id === 'lock') assetCat = 'Cerrajería';
+      if (id === 'safe') assetCat = 'Cerrajería';
 
       addTicket({
         roomNumber: selectedRoom,
         isOccupied: false,
         asset: assetCat,
-        issueType: 'Falla en Revisión',
+        issueType: data.issueType, // USES REAL TYPE NOW
         urgency: Urgency.MEDIUM,
         impact: Impact.ANNOYING,
         description: `[Checklist] ${data.comment}`,
@@ -258,12 +263,25 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
                                  {isEditing && (
                                      <div className="mt-3 animate-in fade-in slide-in-from-top-2 space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                                          <div>
-                                            <label className="text-xs font-bold text-slate-700 uppercase block mb-1">Detalle del problema</label>
+                                            <label className="text-xs font-bold text-slate-700 uppercase block mb-1">Tipo de Problema (Requerido)</label>
+                                            <select 
+                                                className="w-full bg-white text-slate-900 border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                                                value={tempFailIssue}
+                                                onChange={e => setTempFailIssue(e.target.value)}
+                                            >
+                                                {ISSUE_TYPES.map(issue => (
+                                                    <option key={issue} value={issue}>{issue}</option>
+                                                ))}
+                                            </select>
+                                         </div>
+
+                                         <div>
+                                            <label className="text-xs font-bold text-slate-700 uppercase block mb-1">Comentario Detallado</label>
                                             <textarea 
                                                 autoFocus
                                                 className="w-full bg-white text-slate-900 border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none"
                                                 rows={2}
-                                                placeholder="Describa la falla (ej. Foco fundido, Goteo...)"
+                                                placeholder="Describa la falla (ej. Control remoto no encontrado)"
                                                 value={tempFailComment}
                                                 onChange={e => setTempFailComment(e.target.value)}
                                             />
@@ -271,7 +289,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
                                          
                                          <div>
                                              <label className="text-xs font-bold text-slate-700 uppercase flex items-center gap-1 mb-1">
-                                                 <Wrench size={12}/> Refacción Necesaria (Solicitud)
+                                                 <Wrench size={12}/> Refacción Necesaria (Opcional)
                                              </label>
                                              <select 
                                                 className="w-full bg-white text-slate-900 border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none"
@@ -285,9 +303,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
                                                      </option>
                                                  ))}
                                              </select>
-                                             <p className="text-[10px] text-slate-500 mt-1">
-                                                 Si seleccionas una pieza, se generará una solicitud automática en el sistema.
-                                             </p>
                                          </div>
 
                                          <div className="flex gap-2 justify-end pt-2">
@@ -301,7 +316,10 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
                                  {isFail && !isEditing && (
                                      <div className="mt-2 text-sm text-rose-800 bg-white/50 p-2 rounded border border-rose-100 flex flex-col gap-1">
                                          <div className="flex justify-between items-start">
-                                            <span className="italic">"{failData.comment}"</span>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-xs uppercase text-rose-600">{failData.issueType}</span>
+                                                <span className="italic text-slate-600">"{failData.comment}"</span>
+                                            </div>
                                             <button onClick={() => startFail(item.id)} className="text-xs underline text-rose-500 shrink-0 ml-2">Editar</button>
                                          </div>
                                          {failData.partId && (

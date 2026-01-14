@@ -93,7 +93,7 @@ export const ReportingView: React.FC = () => {
                                         type="checkbox" 
                                         checked={isOccupied} 
                                         onChange={e => setIsOccupied(e.target.checked)} 
-                                        className="rounded text-slate-900 focus:ring-slate-900 h-4 w-4"
+                                        className="rounded text-slate-900 focus:ring-slate-900 h-4 w-4 bg-white border-slate-300"
                                     />
                                     <span className="text-sm font-medium text-slate-700">¿Habitación Ocupada?</span>
                                 </label>
