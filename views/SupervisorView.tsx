@@ -95,7 +95,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
     registerInspection(selectedRoom);
 
     // 2. Generate tickets for failures
-    Object.entries(failedItems).forEach(([id, data]) => {
+    (Object.entries(failedItems) as [string, { comment: string, partId?: string, issueType: string }][]).forEach(([id, data]) => {
       // Simple mapping from checklist ID to Asset Category
       let assetCat = 'General';
       if (id === 'ac') assetCat = 'Aire Acondicionado';
