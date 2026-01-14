@@ -155,15 +155,15 @@ const LogbookTab: React.FC = () => {
 
     const formatDate = (isoString: string) => {
         const date = new Date(isoString);
-        const today = new Date();
-        const isToday = date.getDate() === today.getDate() &&
-                        date.getMonth() === today.getMonth() &&
-                        date.getFullYear() === today.getFullYear();
-        
-        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        if (isToday) return `Hoy, ${timeStr}`;
-        return `${date.toLocaleDateString()} ${timeStr}`;
+        // FORCE FULL DATE DISPLAY FOR AUDITS (DD/MM/YYYY hh:mm am/pm)
+        return date.toLocaleString('es-MX', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
     };
 
     const getStatusStyle = (s: string) => {
@@ -256,7 +256,7 @@ const LogbookTab: React.FC = () => {
                              {Object.entries(log.readings).map(([k, v]) => (
                                  <div key={k} className="flex justify-between">
                                      <span className="text-slate-500 capitalize">{k}:</span>
-                                     <span className="font-mono font-bold">{v}</span>
+                                     <span className="font-mono font-bold">{v as React.ReactNode}</span>
                                  </div>
                              ))}
                         </div>
