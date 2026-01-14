@@ -39,11 +39,23 @@ const DashboardContent: React.FC = () => {
 
 // Componente principal con lógica de navegación
 const Main: React.FC = () => {
+  const { setRole } = useApp(); // IMPORTANTE: Usamos setRole para forzar el permiso correcto
   const [viewMode, setViewMode] = useState<'LANDING' | 'DASHBOARD' | 'SUPERVISOR'>('LANDING');
+
+  const handleSelectMode = (mode: 'DASHBOARD' | 'SUPERVISOR') => {
+    // FIX: Forzar el rol adecuado al entrar a cada modo para evitar errores de "Sin Permisos"
+    if (mode === 'SUPERVISOR') {
+      setRole(Role.SUPERVISOR);
+    } else {
+      // Al entrar al Dashboard general, por defecto iniciamos como Gerencia (o mantenemos el anterior si se prefiere lógica compleja, pero esto es más seguro para demos)
+      setRole(Role.MANAGEMENT);
+    }
+    setViewMode(mode);
+  };
 
   // Si estamos en Landing
   if (viewMode === 'LANDING') {
-    return <LandingScreen onSelectMode={setViewMode} />;
+    return <LandingScreen onSelectMode={handleSelectMode} />;
   }
 
   // Si estamos en modo Supervisor (App independiente/móvil desde Landing)

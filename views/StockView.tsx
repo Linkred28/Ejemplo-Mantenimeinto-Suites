@@ -17,7 +17,8 @@ import {
   Tag,
   DollarSign,
   Calendar,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 
 export const StockView: React.FC = () => {
@@ -28,6 +29,10 @@ export const StockView: React.FC = () => {
   // PO Modal State
   const [poModalItem, setPoModalItem] = useState<{part: InventoryPart, qty: number} | null>(null);
   const [confirmQty, setConfirmQty] = useState(0);
+
+  // UI Feedback States
+  const [processingPoId, setProcessingPoId] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState('');
 
   // --- Logic for Shopping List ---
   // 1. Items below min stock
@@ -86,13 +91,29 @@ export const StockView: React.FC = () => {
     });
 
     if(res.ok) {
-      // Close modal
       setPoModalItem(null);
-      // Optional: Show toast or small feedback
-      // We rely on the AppContext state update to reflect the change in the UI
+      setSuccessMsg(`Orden de Compra generada exitosamente.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
     } else {
       alert(`Error: ${res.message}`);
     }
+  };
+
+  // Handle Receive PO
+  const handleReceivePO = (poId: string) => {
+      setProcessingPoId(poId);
+      
+      // Simulate API delay/Processing time
+      setTimeout(() => {
+          const res = receivePO(poId);
+          if (res.ok) {
+              setSuccessMsg(`Mercancía recibida. Stock actualizado correctamente.`);
+              setTimeout(() => setSuccessMsg(''), 4000);
+          } else {
+              alert(`Error al recibir: ${res.message}`);
+          }
+          setProcessingPoId(null);
+      }, 1000);
   };
 
   return (
@@ -163,6 +184,14 @@ export const StockView: React.FC = () => {
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Global Success Toast */}
+      {successMsg && (
+        <div className="fixed top-20 right-4 z-50 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl animate-in slide-in-from-right-5 fade-in flex items-center gap-3">
+            <CheckCircle className="text-white" size={20} />
+            <span className="font-bold">{successMsg}</span>
+        </div>
       )}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -322,8 +351,17 @@ export const StockView: React.FC = () => {
                             </div>
                           ))}
                        </div>
-                       <Button size="sm" className="w-full bg-slate-900 text-white justify-center" onClick={() => receivePO(po.id)}>
-                          Recibir Mercancía
+                       <Button 
+                          size="sm" 
+                          className="w-full bg-slate-900 text-white justify-center disabled:opacity-70 disabled:cursor-not-allowed" 
+                          onClick={() => handleReceivePO(po.id)}
+                          disabled={processingPoId === po.id}
+                        >
+                          {processingPoId === po.id ? (
+                              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Procesando...</>
+                          ) : (
+                              'Recibir Mercancía'
+                          )}
                        </Button>
                     </div>
                   ))}
