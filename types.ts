@@ -1,7 +1,7 @@
 // src/types.ts
 
 export enum Role {
-  MANAGEMENT = 'Gerencia (Marc)',
+  MANAGEMENT = 'Gerencia',
   CLEANING = 'Limpieza',
   RECEPTION = 'Recepción',
   MAINTENANCE = 'Mantenimiento',
