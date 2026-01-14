@@ -29,6 +29,8 @@ export enum TicketStatus {
   VERIFIED = 'Verificado'
 }
 
+export type TicketOrigin = 'GUEST' | 'STAFF' | 'SYSTEM'; // Nuevo: Origen del reporte
+
 export type MaintenanceType = 
   | 'Electricista'
   | 'Plomero'
@@ -62,7 +64,7 @@ export interface InventoryPart {
   id: string; // ej. P-001
   name: string; // nombre visible
   category: PartCategory;
-  unit: 'pza' | 'kit' | 'm' | 'lt' | 'otro';
+  unit: 'pza' | 'kit' | 'm' | 'lt' | 'pack' | 'tubo' | 'gal' | 'rollo' | 'otro';
 
   // Stock
   stockOnHand: number; // disponible físico
@@ -124,6 +126,20 @@ export interface PurchaseOrder {
 }
 
 // =========================
+// Bitácoras / Preventivos (NUEVO)
+// =========================
+
+export interface LogbookEntry {
+  id: string;
+  date: string;
+  type: 'ALBERCA' | 'CALDERAS' | 'ENERGIA';
+  readings: Record<string, string | number>; // ej: { cloro: 1.5, ph: 7.2 }
+  user: string;
+  status: 'OK' | 'WARNING' | 'CRITICAL';
+  notes?: string;
+}
+
+// =========================
 // Tickets / Operación
 // =========================
 
@@ -137,7 +153,9 @@ export interface Ticket {
   urgency: Urgency;
   impact: Impact;
   status: TicketStatus;
-  maintenanceType: MaintenanceType; // Nuevo campo
+  maintenanceType: MaintenanceType;
+  origin: TicketOrigin; // Nuevo: Para distinguir Queja Huésped vs Hallazgo Staff
+  
   createdAt: string; // ISO string
   createdBy: Role;
   assignedTo?: string; // Name of technician
@@ -147,10 +165,13 @@ export interface Ticket {
   // Decision support fields
   needsPart?: boolean;
 
-  // Inventario: vínculo real (evita prompts)
+  // Inventario: vínculo real
   partId?: string; // referencia a InventoryPart.id
   partName?: string; // redundante para UI/CSV (DEMO)
   partQty?: number; // cantidad solicitada/reservada
+
+  // Canibalización (NUEVO)
+  cannibalizedFromRoom?: string; // Si se tomó de otra habitación
 
   needsVendor?: boolean;
   vendorType?: string;
@@ -160,6 +181,10 @@ export interface Ticket {
 
   verifiedBy?: string;
   closedAt?: string;
+  
+  // Métricas (NUEVO)
+  timeSpentMinutes?: number; // Tiempo real invertido
+  evidencePhotoUrl?: string; // URL simulada de foto
 
   // Calculated
   priorityScore: number;
