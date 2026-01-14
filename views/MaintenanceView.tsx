@@ -9,7 +9,7 @@ import {
   ClipboardList, Package, Search, X, ArrowDownCircle,
   AlertTriangle, Zap, Droplet, Fan, Hammer, Monitor,
   Key, Briefcase, Camera, Clock, Repeat, BookOpen,
-  BarChart2, Flame
+  BarChart2, Flame, User, DoorOpen
 } from 'lucide-react';
 
 // ============================
@@ -26,9 +26,10 @@ const TicketCard: React.FC<{ ticket: Ticket; onEdit: (t: Ticket) => void }> = ({
       `}
       onClick={() => onEdit(ticket)}
     >
+      {/* ORIGIN BADGE (Who reported it) */}
       {ticket.origin === 'GUEST' && (
-        <div className="absolute top-0 right-0 bg-rose-500 text-white text-[9px] px-2 py-0.5 rounded-bl-lg font-bold z-10">
-          HUÉSPED
+        <div className="absolute top-0 right-0 bg-rose-500 text-white text-[9px] px-2 py-0.5 rounded-bl-lg font-bold z-10 shadow-sm" title="Reportado por Huésped">
+          ORIGEN: HUÉSPED
         </div>
       )}
       {ticket.cannibalizedFromRoom && (
@@ -37,13 +38,26 @@ const TicketCard: React.FC<{ ticket: Ticket; onEdit: (t: Ticket) => void }> = ({
          </div>
       )}
 
-      <div className="flex justify-between items-start mb-2 mt-2">
+      <div className="flex justify-between items-start mb-2 mt-3">
         <div>
           <span className="text-xs font-mono text-slate-400 block mb-1">{ticket.id}</span>
-          <h4 className="font-bold text-lg text-slate-900 flex items-center gap-2">
-            Hab {ticket.roomNumber}
-            {ticket.urgency === Urgency.HIGH && <AlertTriangle size={16} className="text-rose-500 fill-rose-100" />}
-          </h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="font-bold text-lg text-slate-900 flex items-center gap-1">
+                Hab {ticket.roomNumber}
+                {ticket.urgency === Urgency.HIGH && <AlertTriangle size={16} className="text-rose-500 fill-rose-100" />}
+            </h4>
+            
+            {/* OCCUPANCY STATUS INDICATOR */}
+            {ticket.isOccupied ? (
+                <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200 flex items-center gap-1" title="Habitación Ocupada (Tener precaución)">
+                    <User size={10} /> OCUPADA
+                </span>
+            ) : (
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full border border-slate-200 flex items-center gap-1" title="Habitación Vacía">
+                    <DoorOpen size={10} /> VACÍA
+                </span>
+            )}
+          </div>
         </div>
         <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(ticket.status)}`}>
           {ticket.status}
@@ -115,12 +129,25 @@ const LogbookTab: React.FC = () => {
         e.preventDefault();
         // Convert string readings to numbers
         const finalReadings: Record<string, number> = {};
-        let status: 'OK' | 'WARNING' = 'OK';
+        let status: 'OK' | 'WARNING' | 'CRITICAL' = 'OK';
 
         fields.forEach(f => {
             const val = parseFloat(readings[f.key] || '0');
             finalReadings[f.key] = val;
-            if(val < f.min || val > f.max) status = 'WARNING';
+            
+            // LÓGICA DE ALERTA ROJA (CRITICAL)
+            const isCritical = (f.critMin !== undefined && val < f.critMin) || 
+                               (f.critMax !== undefined && val > f.critMax);
+            
+            // Lógica de Alerta Amarilla (WARNING)
+            const isWarning = (f.min !== undefined && val < f.min) || 
+                              (f.max !== undefined && val > f.max);
+
+            if (isCritical) {
+                status = 'CRITICAL';
+            } else if (isWarning && status !== 'CRITICAL') {
+                status = 'WARNING';
+            }
         });
 
         addLogbookEntry({
@@ -138,7 +165,27 @@ const LogbookTab: React.FC = () => {
         setNotes('');
     };
 
-    const recentLogs = logbook.filter(l => l.type === selectedType).slice(0, 5);
+    const recentLogs = logbook.filter(l => l.type === selectedType).slice(0, 10); 
+
+    // HELPERS PARA FECHA (MANUAL PARA EVITAR ERROR DE BROWSER)
+    const formatDate = (isoString: string) => {
+        const d = new Date(isoString);
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear();
+        let hours = d.getHours();
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+    };
+
+    const getStatusStyle = (s: string) => {
+        if (s === 'CRITICAL') return 'bg-rose-100 text-rose-800 border-rose-200';
+        if (s === 'WARNING') return 'bg-amber-100 text-amber-800 border-amber-200';
+        return 'bg-green-100 text-green-800 border-green-200';
+    };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -177,9 +224,15 @@ const LogbookTab: React.FC = () => {
                                         />
                                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">{f.unit}</span>
                                     </div>
-                                    <div className="flex justify-between mt-1 text-[10px] text-slate-400">
-                                        <span>Min: {f.min}</span>
-                                        <span>Max: {f.max}</span>
+                                    <div className="flex flex-col mt-1 text-[9px] text-slate-400 gap-0.5">
+                                        <div className="flex justify-between">
+                                            <span>OK: {f.min}-{f.max}</span>
+                                        </div>
+                                        {(f.critMin !== undefined || f.critMax !== undefined) && (
+                                            <div className="flex justify-between text-rose-500 font-bold">
+                                                <span>Peligro: {f.critMin !== undefined ? `<${f.critMin}` : ''} {f.critMax !== undefined ? `>${f.critMax}` : ''}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -203,19 +256,26 @@ const LogbookTab: React.FC = () => {
                 <h4 className="text-xs font-bold text-slate-400 uppercase">Historial Reciente ({selectedType})</h4>
                 {recentLogs.length === 0 && <p className="text-sm text-slate-400 italic">No hay registros hoy.</p>}
                 {recentLogs.map(log => (
-                    <div key={log.id} className={`p-3 rounded-lg border ${log.status === 'WARNING' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
+                    <div key={log.id} className={`p-3 rounded-lg border ${log.status === 'WARNING' ? 'bg-amber-50 border-amber-200' : log.status === 'CRITICAL' ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200'}`}>
                         <div className="flex justify-between items-start mb-2">
-                             <span className="text-xs text-slate-500">{new Date(log.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                             <span className={`text-[10px] font-bold px-1.5 rounded ${log.status === 'WARNING' ? 'bg-amber-200 text-amber-800' : 'bg-green-100 text-green-800'}`}>{log.status}</span>
+                             <div className="flex flex-col">
+                                 <span className="text-xs font-bold text-slate-700">{formatDate(log.date)}</span>
+                                 <span className="text-[10px] text-slate-400">{log.user}</span>
+                             </div>
+                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${getStatusStyle(log.status)}`}>
+                                 {log.status === 'CRITICAL' && <AlertOctagon size={12} />}
+                                 {log.status}
+                             </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs border-t border-black/5 pt-2 mt-1">
                              {Object.entries(log.readings).map(([k, v]) => (
                                  <div key={k} className="flex justify-between">
                                      <span className="text-slate-500 capitalize">{k}:</span>
-                                     <span className="font-mono font-bold">{v}</span>
+                                     <span className="font-mono font-bold">{v as React.ReactNode}</span>
                                  </div>
                              ))}
                         </div>
+                        {log.notes && <div className="mt-2 text-[10px] text-slate-500 italic bg-white/50 p-1 rounded">"{log.notes}"</div>}
                     </div>
                 ))}
             </div>
@@ -223,12 +283,9 @@ const LogbookTab: React.FC = () => {
     );
 };
 
-// ... (Rest of TicketEditModal but enhanced with Time Spent and Cannibalization)
-
 const TicketEditModal: React.FC<{
   ticket: Ticket | null;
   onClose: () => void;
-  // ... props shortened for clarity, reusing same logic
 }> = ({ ticket, onClose }) => {
   const { updateTicket, cannibalizePart, role } = useApp();
   const [timeSpent, setTimeSpent] = useState<number | ''>('');
@@ -236,7 +293,6 @@ const TicketEditModal: React.FC<{
   const [cannibalRoom, setCannibalRoom] = useState('');
   const [cannibalPart, setCannibalPart] = useState('');
   
-  // Fake states for UI
   const [hasPhoto, setHasPhoto] = useState(false);
 
   if (!ticket) return null;
@@ -267,10 +323,23 @@ const TicketEditModal: React.FC<{
         <div className="p-6 border-b border-slate-200 flex justify-between items-start">
           <div>
             <span className="text-xs font-mono text-slate-400">{ticket.id}</span>
-            <h2 className="text-2xl font-bold text-slate-900">Habitación {ticket.roomNumber}</h2>
-            <div className="flex flex-col gap-1 mt-1">
+            <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-slate-900">Habitación {ticket.roomNumber}</h2>
+                {/* MODAL OCCUPANCY INDICATOR */}
+                {ticket.isOccupied ? (
+                    <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full border border-indigo-200 flex items-center gap-1">
+                        <User size={14} /> Ocupada
+                    </span>
+                ) : (
+                    <span className="text-xs font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full border border-slate-200 flex items-center gap-1">
+                        <DoorOpen size={14} /> Vacía
+                    </span>
+                )}
+            </div>
+            
+            <div className="flex flex-col gap-1 mt-2">
                 <div className="flex gap-2">
-                    {ticket.origin === 'GUEST' && <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded">QUEJA HUÉSPED</span>}
+                    {ticket.origin === 'GUEST' && <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded border border-rose-200">ORIGEN: HUÉSPED</span>}
                 </div>
                 <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
                     {ticket.asset} <span className="text-slate-400">/</span> {ticket.issueType}
