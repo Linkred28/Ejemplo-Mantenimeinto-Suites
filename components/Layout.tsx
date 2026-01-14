@@ -188,9 +188,9 @@ export const Layout: React.FC<{ children: React.ReactNode; onGoHome: () => void 
                   )}
                 </button>
 
-                {/* Dropdown Notification Panel */}
+                {/* Dropdown Notification Panel - FIXED FOR MOBILE, ABSOLUTE FOR DESKTOP */}
                 {showNotifications && (
-                    <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="fixed top-16 left-4 right-4 mt-2 md:absolute md:top-full md:right-0 md:left-auto md:w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                         <div className="bg-rose-50 px-4 py-3 border-b border-rose-100 flex justify-between items-center">
                             <h3 className="font-bold text-rose-800 text-sm flex items-center gap-2">
                                 <AlertTriangle size={16}/> Tickets Críticos

@@ -3,7 +3,7 @@ import { useApp } from '../AppContext';
 import { ASSETS, ISSUE_TYPES, ROOMS } from '../constants';
 import { Impact, Role, TicketStatus, Urgency } from '../types';
 import { Button } from '../components/Button';
-import { PlusCircle, List, CheckCircle } from 'lucide-react';
+import { PlusCircle, List, CheckCircle, Clock } from 'lucide-react';
 import { getStatusColor } from '../utils';
 
 export const ReportingView: React.FC = () => {
@@ -47,7 +47,7 @@ export const ReportingView: React.FC = () => {
 
     return (
         <div className="max-w-4xl mx-auto">
-            <div className="flex gap-4 mb-8 border-b border-slate-200 pb-1">
+            <div className="flex gap-4 mb-6 border-b border-slate-200 pb-1">
                 <button 
                     onClick={() => setMode('FORM')} 
                     className={`pb-3 px-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${mode === 'FORM' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
@@ -177,40 +177,75 @@ export const ReportingView: React.FC = () => {
 
             {mode === 'LIST' && (
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Habitación</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Detalle</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
-                            {myTickets.map(t => (
-                                <tr key={t.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{t.id}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{t.roomNumber}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-500">
-                                        <div className="font-medium text-slate-700">{t.asset}</div>
-                                        <div className="truncate max-w-xs">{t.description}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(t.status)}`}>
-                                            {t.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                            {myTickets.length === 0 && (
+                    {/* MOBILE CARD VIEW */}
+                    <div className="md:hidden divide-y divide-slate-100">
+                        {myTickets.map(t => (
+                            <div key={t.id} className="p-4 flex flex-col gap-2">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-lg text-slate-900">Hab {t.roomNumber}</span>
+                                        <span className="text-xs font-mono text-slate-400">#{t.id.split('-')[1]}</span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded-full border ${getStatusColor(t.status)}`}>
+                                        {t.status}
+                                    </span>
+                                </div>
+                                
+                                <div>
+                                    <div className="font-medium text-sm text-slate-800">{t.asset}</div>
+                                    <div className="text-sm text-slate-600 mt-1">{t.description}</div>
+                                </div>
+                                
+                                <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+                                    <Clock size={12}/>
+                                    <span>{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                </div>
+                            </div>
+                        ))}
+                        {myTickets.length === 0 && (
+                            <div className="p-8 text-center text-slate-500 text-sm">
+                                No hay reportes recientes.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* DESKTOP TABLE VIEW */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="min-w-full divide-y divide-slate-200">
+                            <thead className="bg-slate-50">
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-10 text-center text-slate-500 text-sm">
-                                        No has reportado incidencias recientes.
-                                    </td>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Habitación</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Detalle</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-slate-200">
+                                {myTickets.map(t => (
+                                    <tr key={t.id} className="hover:bg-slate-50">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{t.id}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{t.roomNumber}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-500">
+                                            <div className="font-medium text-slate-700">{t.asset}</div>
+                                            <div className="truncate max-w-xs">{t.description}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(t.status)}`}>
+                                                {t.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {myTickets.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-10 text-center text-slate-500 text-sm">
+                                            No has reportado incidencias recientes.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>

@@ -187,8 +187,8 @@ export const ReceptionView: React.FC = () => {
                 key={t.id} 
                 className={`px-6 py-5 transition-colors ${t.urgency === Urgency.HIGH ? 'bg-rose-50/50' : ''}`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="min-w-0 w-full">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-mono text-slate-400">{t.id}</span>
                       <span className="text-[10px] uppercase bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold">
@@ -217,13 +217,13 @@ export const ReceptionView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 shrink-0">
-                    <Button variant="secondary" size="sm" onClick={() => handleCopy(t)}>
+                  <div className="flex gap-2 mt-2 sm:mt-0 sm:flex-col shrink-0 w-full sm:w-auto">
+                    <Button variant="secondary" size="sm" onClick={() => handleCopy(t)} className="flex-1 sm:flex-none justify-center">
                       <Copy className="w-4 h-4 mr-2" /> Copiar mensaje
                     </Button>
 
                     {(t.urgency !== Urgency.HIGH || t.impact !== Impact.BLOCKING) && (
-                      <Button variant="danger" size="sm" onClick={() => handleEscalateCritical(t)}>
+                      <Button variant="danger" size="sm" onClick={() => handleEscalateCritical(t)} className="flex-1 sm:flex-none justify-center">
                         <AlertTriangle className="w-4 h-4 mr-2" /> Escalar a crítico
                       </Button>
                     )}

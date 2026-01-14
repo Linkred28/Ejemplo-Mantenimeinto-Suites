@@ -233,10 +233,10 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({ onBack, isEmbedd
                                  isFail ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200'
                              }`}>
                                  <div className="flex items-center justify-between mb-2">
-                                     <span className={`font-bold ${isFail ? 'text-rose-700' : isOK ? 'text-emerald-700' : 'text-slate-700'}`}>
+                                     <span className={`font-bold flex-1 mr-2 ${isFail ? 'text-rose-700' : isOK ? 'text-emerald-700' : 'text-slate-700'}`}>
                                          {item.label}
                                      </span>
-                                     <div className="flex gap-2">
+                                     <div className="flex gap-2 shrink-0">
                                          {/* OK BUTTON */}
                                          <button 
                                             onClick={() => markOK(item.id)}
